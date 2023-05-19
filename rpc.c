@@ -21,19 +21,20 @@ struct function_registry {
 
 rpc_server *rpc_init_server(int port) {
     // Attempt to allocate memory
-    rpc_client *client = malloc(sizeof(rpc_client));
-    if (client == NULL) {
+    rpc_server *server = malloc(sizeof(rpc_server));
+    if (server == NULL) {
         return NULL;
     }
     // Attempt to allocate socket
-    client->client_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (client->client_sock < 0) {
-        free(client);
+    server->server_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (server->server_sock < 0) {
+        free(server);
         return NULL;
     }
 
-    client->is_connected = 0;
-    return client;
+    server->registered_functions = NULL;
+    server->is_running = 0;
+    return server;
 }
 
 int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
