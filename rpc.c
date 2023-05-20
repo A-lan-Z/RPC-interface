@@ -209,7 +209,7 @@ void *handle_connection(void *arg) {
 
 /* Function to initialize server */
 rpc_server *rpc_init_server(int port) {
-    fprintf(stdout, "rpc_init_server");
+    fprintf(stdout, "rpc_init_server\n");
     // Attempt to allocate memory
     rpc_server *server = malloc(sizeof(rpc_server));
     if (server == NULL) {
@@ -282,7 +282,7 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
 
 /* Function to start the server */
 void rpc_serve_all(rpc_server *srv) {
-    fprintf(stdout, "rpc_serve_all");
+    fprintf(stdout, "rpc_serve_all\n");
     // Listen for incoming connections
     listen(srv->server_sock, 5);
 
@@ -310,7 +310,7 @@ void rpc_serve_all(rpc_server *srv) {
 
 /* Function to initialize client */
 rpc_client *rpc_init_client(char *addr, int port) {
-    fprintf(stdout, "rpc_init_client");
+    fprintf(stdout, "rpc_init_client\n");
     // Attempt to allocate memory
     rpc_client *client = malloc(sizeof(rpc_client));
     if (client == NULL) {
