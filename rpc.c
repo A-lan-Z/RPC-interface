@@ -416,10 +416,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     }
 
     // Return NULL if data2_len doesn't match the actual size of data2
-    if (payload->data2_len == 0 || payload->data2 != NULL) {
-        fprintf(stdout, "rpc_call data2_len = %d but data2 is not NULL: %d\n", payload->data2_len, sizeof(payload->data2));
-        return NULL;
-    } else if (payload->data2_len != sizeof(payload->data2)) {
+    if (payload->data2_len != sizeof(payload->data2)) {
         fprintf(stdout, "rpc_call data2_len = %d but data2 = %d\n", payload->data2_len, sizeof(payload->data2));
         return NULL;
     }
