@@ -336,6 +336,12 @@ rpc_client *rpc_init_client(char *addr, int port) {
 
 /* Function to create a new connection and send a find request to the server */
 rpc_handle *rpc_find(rpc_client *cl, char *name) {
+    // Return NULL if any of the arguments is NULL
+    if (cl == NULL || name == NULL) {
+        fprintf(stdout, "rpc_find some input is null\n");
+        return NULL;
+    }
+
     fprintf(stdout, "rpc_find: %s\n", name);
     // Create a new socket
     int client_sock = socket(AF_INET6, SOCK_STREAM, 0);
@@ -403,6 +409,12 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 
 /* Function to create a new connection and send a call request to the server */
 rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
+    // Return NULL if any of the arguments is NULL
+    if (cl == NULL || h == NULL || payload == NULL) {
+        fprintf(stdout, "rpc_call some input is null\n");
+        return NULL;
+    }
+
     fprintf(stdout, "rpc_call: %s\n", h->function_name);
     // Create a new socket
     int client_sock = socket(AF_INET6, SOCK_STREAM, 0);
@@ -414,11 +426,6 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     // Connect to the server
     if (connect(client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
         free(cl);
-        return NULL;
-    }
-
-    // Return NULL if any of the arguments is NULL
-    if (cl == NULL || h == NULL || payload == NULL) {
         return NULL;
     }
 
