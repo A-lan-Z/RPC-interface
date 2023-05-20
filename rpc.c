@@ -416,10 +416,12 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     }
 
     // Return NULL if data2_len doesn't match the actual size of data2
-    if (payload->data2_len == 0 && payload->data2 != NULL) {
-        fprintf(stdout, "rpc_call data2_len = %d but data2 is not NULL\n", payload->data2_len);
+    if (payload->data2 == NULL && payload->data2_len != 0) {
+        fprintf(stdout, "rpc_call data2_len = %d but data2 is NULL\n", payload->data2_len);
         return NULL;
     }
+
+    fprintf(stdout, "rpc_call data1 = %d,  data2_len = %d\n", payload->data1, payload->data2_len);
 
     fprintf(stdout, "rpc_call: %s\n", h->function_name);
     // Create a new socket
