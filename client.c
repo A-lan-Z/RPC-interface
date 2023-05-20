@@ -3,11 +3,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[]) {
     int exit_code = 0;
+    int opt;
+    char *ip_address = "::1"; // default IP address
+    int port = 3000; // default port
 
-    rpc_client *state = rpc_init_client("::1", 3000);
+    // Parse command line options
+    while ((opt = getopt(argc, argv, "i:p:")) != -1) {
+        switch (opt) {
+            case 'i':
+                ip_address = optarg;
+                break;
+            case 'p':
+                port = atoi(optarg);
+                break;
+            default: /* '?' */
+                fprintf(stderr, "Usage: %s [-i ip_address] [-p port]\n", argv[0]);
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    rpc_client *state = rpc_init_client(ip_address, port);
     if (state == NULL) {
         exit(EXIT_FAILURE);
     }
