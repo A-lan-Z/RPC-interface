@@ -421,7 +421,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         return NULL;
     } else if (payload->data2 != NULL && payload->data2_len == 0) {
         fprintf(stdout, "rpc_call data2_len = 0 but data2 is not NULL\n");
-
+        return NULL;
     }
 
     fprintf(stdout, "rpc_call data1 = %d,  data2_len = %d\n", payload->data1, payload->data2_len);
