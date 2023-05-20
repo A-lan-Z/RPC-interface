@@ -8,9 +8,10 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#define RPC_FIND 2
 #define RPC_ERROR 0
 #define RPC_SUCCESS 1
+#define RPC_FIND 2
+#define RPC_CALL 3
 
 
 /* Using a linked list to store all the registered function for the server */
@@ -40,6 +41,9 @@ struct rpc_handle {
 int rpc_send_message(int sock, int operation, char *name, rpc_data *data) {
     fprintf(stderr, "working rpc_send_message starting to socket %d\n", sock);
     fprintf(stderr, "working rpc_send_message operation: %d,   name: %s\n", operation, name);
+    if (data && data->data1) {
+        fprintf(stderr, "working rpc_send_message returning result: %d\n", data->data1);
+    }
 
     // Convert ints to network byte order
     uint32_t name_len_net = htonl(strlen(name));
@@ -101,6 +105,28 @@ void handle_rpc_find(int client_sock, char *function_name, const rpc_data *data,
     rpc_send_message(client_sock, RPC_SUCCESS, function_name, NULL);
 }
 
+void handle_rpc_call(int client_sock, char *function_name, rpc_data *data, function_reg *function_list) {
+    fprintf(stderr, "working handle_rpc_call\n");
+
+    // Check if the function is registered
+    function_reg *func = find_function(function_name, function_list);
+    if (func == NULL) {
+        fprintf(stderr, "working handle_rpc_call function not found\n");
+        // Send an error response to the client
+        rpc_send_message(client_sock, RPC_ERROR, "", NULL);
+        return;
+    }
+    // Call the function
+    rpc_data *output_data = func->handler(data);
+    fprintf(stderr, "working handle_rpc_call function called, result: %d\n", output_data->data1);
+    // Send a response to the client with the output data
+    rpc_send_message(client_sock, RPC_SUCCESS, function_name, output_data);
+    fprintf(stderr, "working handle_rpc_call reply sent\n");
+    // Free the output data
+    rpc_data_free(output_data);
+}
+
+
 
 /* Helper function to receive message using designed protocol */
 void *handle_connection(void *arg) {
@@ -126,17 +152,24 @@ void *handle_connection(void *arg) {
     function_name[name_len] = '\0'; // null-terminate the string
 
     rpc_data *data = malloc(sizeof(rpc_data));
+    uint32_t data1_net;
     data->data1 = 0;
     data->data2_len = data_len;
     data->data2 = malloc(data_len);
+    read(client_sock, &data1_net, sizeof(data1_net));
+    data->data1 = ntohl(data1_net);
     read(client_sock, data->data2, data_len);
     fprintf(stderr, "working handle_connection message read\n");
     // Handle the operation
     switch (operation) {
         case RPC_FIND:
+            fprintf(stderr, "working handle_connection find request found\n");
             handle_rpc_find(client_sock, function_name, data, srv->registered_functions);
             break;
-            // ... handle other operations ...
+        case RPC_CALL:
+            fprintf(stderr, "working handle_connection call request found\n");
+            handle_rpc_call(client_sock, function_name, data, srv->registered_functions);
+            break;
     }
     fprintf(stderr, "working handle_connection operation handled\n");
 
@@ -228,6 +261,7 @@ void rpc_serve_all(rpc_server *srv) {
         pthread_t thread;
         fprintf(stderr, "working connection established\n");
         pthread_create(&thread, NULL, handle_connection, args);
+        pthread_detach(thread); // Detach the thread
     }
 }
 
@@ -319,7 +353,58 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 }
 
 rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
-    return NULL;
+    fprintf(stderr, "working rpc_call\n");
+    // Return NULL if any of the arguments is NULL
+    if (cl == NULL || h == NULL || payload == NULL) {
+        return NULL;
+    }
+
+    // Send rpc_call message
+    fprintf(stderr, "working rpc_call sending message\n");
+    rpc_send_message(cl->client_sock, RPC_CALL, h->function_name, payload);
+    fprintf(stderr, "working rpc_call message sent\n");
+
+    // Receive response
+    int operation;
+    uint32_t name_len_net, data_len_net;
+    read(cl->client_sock, &operation, sizeof(operation));
+    read(cl->client_sock, &name_len_net, sizeof(name_len_net));
+    read(cl->client_sock, &data_len_net, sizeof(data_len_net));
+    fprintf(stderr, "working rpc_call here1\n");
+
+    // Convert lengths to host byte order
+    size_t name_len = ntohl(name_len_net);
+    size_t data_len = ntohl(data_len_net);
+    fprintf(stderr, "working rpc_call here2\n");
+
+    // Check operation code for error
+    if (operation == RPC_ERROR) {
+        fprintf(stderr, "working rpc_call here3 %d\n", operation);
+        return NULL;
+    }
+
+    // Allocate new rpc_data structure
+    rpc_data *output_data = malloc(sizeof(rpc_data));
+    output_data->data2_len = data_len;
+    fprintf(stderr, "working rpc_call here4\n");
+
+
+    // Read function name
+    char *function_name = malloc(name_len + 1);
+    read(cl->client_sock, function_name, name_len);
+    function_name[name_len] = '\0'; // null-terminate the string
+
+    // Read output data
+    uint32_t data1_net;
+    read(cl->client_sock, &data1_net, sizeof(data1_net));
+    output_data->data1 = ntohl(data1_net);
+    if (data_len > 0) {
+        output_data->data2 = malloc(data_len);
+        read(cl->client_sock, output_data->data2, data_len);
+    }
+    fprintf(stderr, "working rpc_call response received: result:  %d, data2_len:  %d\n", output_data->data1, data_len);
+
+    return output_data;
 }
 
 void rpc_close_client(rpc_client *cl) {

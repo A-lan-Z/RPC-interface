@@ -5,8 +5,6 @@
 #include <signal.h>
 
 int main(int argc, char *argv[]) {
-    fprintf(stderr, "working\n");
-
     int exit_code = 0;
 
     rpc_client *state = rpc_init_client("::1", 3000);
@@ -22,7 +20,10 @@ int main(int argc, char *argv[]) {
         exit_code = 1;
         goto cleanup;
     }
+    fprintf(stderr, "FIND FUNCTION COMPLETED ++++++++++++++++++++++++++++++++++++++\n");
+
     for (int i = 0; i < 2; i++) {
+        state = rpc_init_client("::1", 3000);
         /* Prepare request */
         char left_operand = i;
         char right_operand = 100;
@@ -30,7 +31,10 @@ int main(int argc, char *argv[]) {
             .data1 = left_operand, .data2_len = 1, .data2 = &right_operand};
 
         /* Call and receive response */
+        fprintf(stderr, "Starting Function call of add2\n");
         rpc_data *response_data = rpc_call(state, handle_add2, &request_data);
+        fprintf(stderr, "Result of add2 returned: %d\n", response_data->data1);
+
         if (response_data == NULL) {
             fprintf(stderr, "Function call of add2 failed\n");
             exit_code = 1;

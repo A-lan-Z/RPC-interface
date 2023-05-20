@@ -27,6 +27,7 @@ int main(int argc, char *argv[]) {
 /* Adds 2 signed 8 bit numbers */
 /* Uses data1 for left operand, data2 for right operand */
 rpc_data *add2_i8(rpc_data *in) {
+    fprintf(stderr, "working add2_i8 entered\n");
     /* Check data2 */
     if (in->data2 == NULL || in->data2_len != 1) {
         return NULL;
