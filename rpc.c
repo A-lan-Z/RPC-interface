@@ -317,22 +317,29 @@ rpc_client *rpc_init_client(char *addr, int port) {
 
 /* Function to create a new connection and send a find request to the server */
 rpc_handle *rpc_find(rpc_client *cl, char *name) {
+    // Create a new socket
+    int client_sock = socket(AF_INET6, SOCK_STREAM, 0);
+    if (client_sock < 0) {
+        perror("Socket creation failed");
+        return NULL;
+    }
+
     // Connect to the server
-    if (connect(cl->client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
+    if (connect(client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
         free(cl);
         return NULL;
     }
 
     // Send rpc_find message
     rpc_data data = {0, 0, NULL};
-    rpc_send_message(cl->client_sock, RPC_FIND, name, &data);
+    rpc_send_message(client_sock, RPC_FIND, name, &data);
 
     // Receive response
     int operation;
     uint32_t name_len_net, data_len_net;
-    read(cl->client_sock, &operation, sizeof(operation));
-    read(cl->client_sock, &name_len_net, sizeof(name_len_net));
-    read(cl->client_sock, &data_len_net, sizeof(data_len_net));
+    read(client_sock, &operation, sizeof(operation));
+    read(client_sock, &name_len_net, sizeof(name_len_net));
+    read(client_sock, &data_len_net, sizeof(data_len_net));
 
     // Convert lengths to host byte order
     size_t name_len = ntohl(name_len_net);
@@ -349,7 +356,7 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
         perror("malloc");
         return NULL;
     }
-    read(cl->client_sock, function_name, name_len);
+    read(client_sock, function_name, name_len);
     function_name[name_len] = '\0'; // null-terminate the string
 
     // Create rpc_handle
@@ -364,9 +371,9 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
     // Read output data
     uint32_t data1_net;
     void *discard_buffer = malloc(data_len);
-    read(cl->client_sock, &data1_net, sizeof(data1_net));
+    read(client_sock, &data1_net, sizeof(data1_net));
     if (data_len > 0) {
-        read(cl->client_sock, discard_buffer, data_len);
+        read(client_sock, discard_buffer, data_len);
     }
 
     return handle;
@@ -374,8 +381,15 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 
 /* Function to create a new connection and send a call request to the server */
 rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
+    // Create a new socket
+    int client_sock = socket(AF_INET6, SOCK_STREAM, 0);
+    if (client_sock < 0) {
+        perror("Socket creation failed");
+        return NULL;
+    }
+
     // Connect to the server
-    if (connect(cl->client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
+    if (connect(client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
         free(cl);
         return NULL;
     }
@@ -386,14 +400,14 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     }
 
     // Send rpc_call message
-    rpc_send_message(cl->client_sock, RPC_CALL, h->function_name, payload);
+    rpc_send_message(client_sock, RPC_CALL, h->function_name, payload);
 
     // Receive response
     int operation;
     uint32_t name_len_net, data_len_net;
-    read(cl->client_sock, &operation, sizeof(operation));
-    read(cl->client_sock, &name_len_net, sizeof(name_len_net));
-    read(cl->client_sock, &data_len_net, sizeof(data_len_net));
+    read(client_sock, &operation, sizeof(operation));
+    read(client_sock, &name_len_net, sizeof(name_len_net));
+    read(client_sock, &data_len_net, sizeof(data_len_net));
 
     // Convert lengths to host byte order
     size_t name_len = ntohl(name_len_net);
@@ -414,12 +428,12 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     // Read function name
     char *function_name = malloc(name_len + 1);
-    read(cl->client_sock, function_name, name_len);
+    read(client_sock, function_name, name_len);
     function_name[name_len] = '\0'; // null-terminate the string
 
     // Read output data
     uint32_t data1_net;
-    read(cl->client_sock, &data1_net, sizeof(data1_net));
+    read(client_sock, &data1_net, sizeof(data1_net));
     output_data->data1 = ntohl(data1_net);
     if (data_len > 0) {
         output_data->data2 = malloc(data_len);
@@ -428,7 +442,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
             free(output_data);
             return NULL;
         }
-        read(cl->client_sock, output_data->data2, data_len);
+        read(client_sock, output_data->data2, data_len);
     }
     return output_data;
 }

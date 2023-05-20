@@ -21,7 +21,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "RPC_FIND SUCCESSFUL\n");
 
     for (int i = 0; i < 2; i++) {
-        state = rpc_init_client("::1", 3000);
         /* Prepare request */
         char left_operand = i;
         char right_operand = 100;
