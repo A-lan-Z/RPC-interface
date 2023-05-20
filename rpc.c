@@ -218,6 +218,7 @@ rpc_server *rpc_init_server(int port) {
 
     // Bind the socket to the server address and port
     if (bind(server->server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("bind");
         close(server->server_sock);
         free(server);
         return NULL;
@@ -230,9 +231,17 @@ rpc_server *rpc_init_server(int port) {
 
 /* Function to register the server functions */
 int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
-    // Return failure if any of the arguments is NULL
-    if (srv == NULL || name == NULL || handler == NULL) {
+    // Return failure if any of the arguments is NULL or name is empty
+    if (srv == NULL || name == NULL || strlen(name) < 1 || handler == NULL) {
         return -1;
+    }
+
+    // Check if a function with the same name is already registered
+    function_reg *existing_function = find_function(name, srv->registered_functions);
+    if (existing_function != NULL) {
+        // If a function with the same name is already registered, overwrite its handler
+        existing_function->handler = handler;
+        return 1;
     }
 
     // Attempt to allocate memory
@@ -257,10 +266,15 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
 
 /* Function to start the server */
 void rpc_serve_all(rpc_server *srv) {
+    // Return if srv is NULL
+    if (srv == NULL) {
+        return;
+    }
+
     // Listen for incoming connections
     listen(srv->server_sock, 5);
 
-    // Accept incoming connections in a infinite loop
+    // Accept incoming connections in an infinite loop
     while (srv->is_running) {
         int client_sock = accept(srv->server_sock, NULL, NULL);
         if (client_sock < 0) {
