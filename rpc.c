@@ -108,7 +108,15 @@ void handle_rpc_call(int client_sock, char *function_name, rpc_data *data, funct
 
     // Function found, call the function
     rpc_data *output_data = func->handler(data);
-    // Send a response to the client with the output data
+
+    // Send error response if data2_len doesn't match the actual size of data2
+    if ((output_data->data2 == NULL && output_data->data2_len != 0) ||
+        (output_data->data2 != NULL && output_data->data2_len == 0)) {
+        rpc_send_message(client_sock, RPC_ERROR, "", NULL);
+        return;
+    }
+
+    // Send success response to the client with the output data
     rpc_send_message(client_sock, RPC_SUCCESS, function_name, output_data);
     rpc_data_free(output_data);
 }
