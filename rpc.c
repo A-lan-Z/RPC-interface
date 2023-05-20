@@ -61,10 +61,12 @@ int rpc_send_message(int sock, int operation, char *name, rpc_data *data) {
     write(sock, name, strlen(name));
     fprintf(stderr, "working rpc_send_message sent function name\n");
 
-    // Send rpc_data
-    write(sock, &data1_net, sizeof(data1_net));
-    write(sock, data->data2, data->data2_len);
-    fprintf(stderr, "working rpc_send_message sent data\n");
+    if (data) {
+        // Send rpc_data
+        write(sock, &data1_net, sizeof(data1_net));
+        write(sock, data->data2, data->data2_len);
+        fprintf(stderr, "working rpc_send_message sent data\n");
+    }
 
     return 0;
 }
@@ -103,6 +105,8 @@ void handle_rpc_find(int client_sock, char *function_name, const rpc_data *data,
 
     // Send a success response to the client
     rpc_send_message(client_sock, RPC_SUCCESS, function_name, NULL);
+    fprintf(stderr, "working handle_rpc_find message sent\n");
+
 }
 
 void handle_rpc_call(int client_sock, char *function_name, rpc_data *data, function_reg *function_list) {
@@ -165,6 +169,8 @@ void *handle_connection(void *arg) {
         case RPC_FIND:
             fprintf(stderr, "working handle_connection find request found\n");
             handle_rpc_find(client_sock, function_name, data, srv->registered_functions);
+            fprintf(stderr, "working handle_connection find request terminated\n");
+
             break;
         case RPC_CALL:
             fprintf(stderr, "working handle_connection call request found\n");
@@ -179,7 +185,7 @@ void *handle_connection(void *arg) {
     free(data);
     close(client_sock);
     free(arg);
-
+    fprintf(stderr, "handle_connection exiting+++++++++++++++++++++++++++++++++++++++\n");
     return NULL;
 }
 
@@ -206,6 +212,12 @@ rpc_server *rpc_init_server(int port) {
     server_addr.sin6_family = AF_INET6;
     server_addr.sin6_port = htons(port);
     server_addr.sin6_addr = in6addr_any; // listen on all interfaces
+
+    int enable = 1;
+    if (setsockopt(server->server_sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
 
     // Bind the socket to the server address and port
     if (bind(server->server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
@@ -269,6 +281,7 @@ void rpc_serve_all(rpc_server *srv) {
 struct rpc_client {
     int client_sock;
     int is_connected;
+    struct sockaddr_in6 server_addr;
 };
 
 
@@ -300,21 +313,32 @@ rpc_client *rpc_init_client(char *addr, int port) {
     }
     fprintf(stderr, "working rpc_init_client\n");
 
-    // Connect to the server
-    if (connect(client->client_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        free(client);
-        fprintf(stderr, "working rpc_init_client failed\n");
-
-        return NULL;
-    }
+//    // Connect to the server
+//    if (connect(client->client_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+//        free(client);
+//        fprintf(stderr, "working rpc_init_client failed\n");
+//
+//        return NULL;
+//    }
     fprintf(stderr, "working rpc_init_client\n");
 
+    // Store the server address and port
+    client->server_addr = server_addr;
     client->is_connected = 1;
     return client;
 }
 
 /* Right now this function assumes that everything can fit in one packet */
 rpc_handle *rpc_find(rpc_client *cl, char *name) {
+    // Connect to the server
+    if (connect(cl->client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
+        free(cl);
+        fprintf(stderr, "working rpc_init_client failed\n");
+
+        return NULL;
+    }
+    fprintf(stderr, "new socket for find request created--------------------------------------------\n");
+
     rpc_data data = {0, 0, NULL};
     fprintf(stderr, "working rpc_find\n");
 
@@ -349,10 +373,29 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
     handle->function_name = function_name;
     fprintf(stderr, "working rpc_find handled created\n");
 
+    fprintf(stderr, "working rpc_find operation: %d   name_len: %d   data_len: %d\n", operation, name_len, data_len);
+    // Read output data
+    uint32_t data1_net;
+    void *discard_buffer = malloc(data_len);
+    read(cl->client_sock, &data1_net, sizeof(data1_net));
+    if (data_len > 0) {
+        read(cl->client_sock, discard_buffer, data_len);
+    }
+    fprintf(stderr, "working rpc_find finishing\n");
+
     return handle;
 }
 
 rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
+    // Connect to the server
+    if (connect(cl->client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
+        free(cl);
+        fprintf(stderr, "working rpc_init_client failed\n");
+
+        return NULL;
+    }
+    fprintf(stderr, "new socket for call request created--------------------------------------------\n");
+
     fprintf(stderr, "working rpc_call\n");
     // Return NULL if any of the arguments is NULL
     if (cl == NULL || h == NULL || payload == NULL) {
@@ -408,8 +451,17 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 }
 
 void rpc_close_client(rpc_client *cl) {
+    if (cl == NULL) {
+        return;
+    }
 
+    // Close the client socket
+    close(cl->client_sock);
+
+    // Free the client struct
+    free(cl);
 }
+
 
 void rpc_data_free(rpc_data *data) {
     if (data == NULL) {
