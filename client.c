@@ -2,22 +2,26 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 int main(int argc, char *argv[]) {
+    fprintf(stderr, "working\n");
+
     int exit_code = 0;
 
     rpc_client *state = rpc_init_client("::1", 3000);
     if (state == NULL) {
         exit(EXIT_FAILURE);
     }
-
+    fprintf(stderr, "working finding add2\n");
     rpc_handle *handle_add2 = rpc_find(state, "add2");
+    fprintf(stderr, "working rpc_find returned\n");
+
     if (handle_add2 == NULL) {
         fprintf(stderr, "ERROR: Function add2 does not exist\n");
         exit_code = 1;
         goto cleanup;
     }
-
     for (int i = 0; i < 2; i++) {
         /* Prepare request */
         char left_operand = i;

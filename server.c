@@ -18,9 +18,9 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Failed to register add2\n");
         exit(EXIT_FAILURE);
     }
-
+    fprintf(stderr, "Serving\n");
     rpc_serve_all(state);
-
+    fprintf(stderr, "failed Serving\n");
     return 0;
 }
 
