@@ -11,16 +11,14 @@ int main(int argc, char *argv[]) {
     if (state == NULL) {
         exit(EXIT_FAILURE);
     }
-    fprintf(stderr, "working finding add2\n");
     rpc_handle *handle_add2 = rpc_find(state, "add2");
-    fprintf(stderr, "working rpc_find returned\n");
 
     if (handle_add2 == NULL) {
         fprintf(stderr, "ERROR: Function add2 does not exist\n");
         exit_code = 1;
         goto cleanup;
     }
-    fprintf(stderr, "FIND FUNCTION COMPLETED ++++++++++++++++++++++++++++++++++++++\n");
+    fprintf(stderr, "RPC_FIND SUCCESSFUL\n");
 
     for (int i = 0; i < 2; i++) {
         state = rpc_init_client("::1", 3000);
