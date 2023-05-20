@@ -382,10 +382,10 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         return NULL;
     }
 
-    // Return NULL if data2_len does not match actual data2 length
-    if (payload->data2_len == 0 && payload->data2 != NULL) {
+    // Return NULL if data2_len doesn't match the actual size of data2
+    if (payload->data2 == NULL && payload->data2_len != 0) {
         return NULL;
-    } else if (payload->data2_len != sizeof(payload->data2)) {
+    } else if (payload->data2 != NULL && payload->data2_len == 0) {
         return NULL;
     }
 
