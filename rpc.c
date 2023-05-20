@@ -467,6 +467,8 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
             return NULL;
         }
         read(client_sock, output_data->data2, data_len);
+    } else {
+        output_data->data2 = NULL;
     }
     fprintf(stderr, "rpc_call: %s   function returned data1 = %d,  data2_len = %d\n", h->function_name, output_data->data1, output_data->data2_len);
     return output_data;
