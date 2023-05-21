@@ -1,26 +1,32 @@
 CC=cc
 CFLAGS=-Wall
+LDFLAGS=-pthread
 RPC_SYSTEM=rpc.o
 
 .PHONY: format all clean
 
 all: $(RPC_SYSTEM) rpc-server rpc-client
 
-$(RPC_SYSTEM): rpc.c rpc.h
+rpc_server.o: rpc_server.c rpc_internal.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+rpc_client.o: rpc_client.c rpc_internal.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+rpc_internal.o: rpc_internal.c rpc_internal.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(RPC_SYSTEM): rpc_server.o rpc_client.o rpc_internal.o
+	ld -r -o $@ $^
+
 rpc-server: server.c $(RPC_SYSTEM)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 rpc-client: client.c $(RPC_SYSTEM)
-	$(CC) $(CFLAGS) -o $@ $^
-
-# RPC_SYSTEM_A=rpc.a
-# $(RPC_SYSTEM_A): rpc.o
-# 	ar rcs $(RPC_SYSTEM_A) $(RPC_SYSTEM)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 format:
 	clang-format -style=file -i *.c *.h
 
 clean:
-	rm -f $(RPC_SYSTEM) rpc-server rpc-client
+	rm -f *.o rpc-server rpc-client
