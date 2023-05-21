@@ -1,4 +1,5 @@
 #include "rpc.h"
+#include "rpc_internal.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,6 +64,7 @@ int main(int argc, char *argv[]) {
 
 cleanup:
     if (handle_add2 != NULL) {
+        free(handle_add2->function_name);
         free(handle_add2);
     }
 
