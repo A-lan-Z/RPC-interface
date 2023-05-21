@@ -115,9 +115,18 @@ void handle_rpc_call(int client_sock, char *function_name, rpc_data *data, funct
                (output_data->data2 != NULL && output_data->data2_len == 0)) {
         // Send error response if data2_len doesn't match the actual size of data2
         rpc_send_message(client_sock, RPC_ERROR, "", NULL);
+        rpc_data_free(output_data);
         return;
     }
-    
+
+    // Check if data2_len is too large to be encoded in the packet format
+    if (output_data->data2_len > 100000) {
+        fprintf(stderr, "Overlength error\n");
+        rpc_send_message(client_sock, RPC_ERROR, "", NULL);
+        rpc_data_free(output_data);
+        return;
+    }
+
     // Send a response to the client with the output data
     rpc_send_message(client_sock, RPC_SUCCESS, function_name, output_data);
     rpc_data_free(output_data);
@@ -403,6 +412,12 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     // Return NULL if any of the arguments is NULL
     if (cl == NULL || h == NULL || payload == NULL) {
+        return NULL;
+    }
+
+    // Check if data2_len is too large to be encoded in the packet format
+    if (payload->data2_len > 100000) {
+        fprintf(stderr, "Overlength error\n");
         return NULL;
     }
 
