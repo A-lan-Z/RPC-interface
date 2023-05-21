@@ -88,7 +88,7 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
     rpc_handle *handle = malloc(sizeof(rpc_handle));
     if (handle == NULL) {
         perror("malloc");
-        free(function_name);
+        free(function_name); // free memory if handle allocation fails
         return NULL;
     }
     handle->function_name = function_name;
@@ -100,6 +100,10 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
     if (data_len > 0) {
         read(client_sock, discard_buffer, data_len);
     }
+
+    // Free the discard_buffer after use
+    free(discard_buffer);
+
     return handle;
 }
 
