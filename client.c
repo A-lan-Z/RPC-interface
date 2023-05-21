@@ -20,8 +20,7 @@ int main(int argc, char *argv[]) {
             case 'p':
                 port = atoi(optarg);
                 break;
-            default: /* '?' */
-                fprintf(stderr, "Usage: %s [-i ip_address] [-p port]\n", argv[0]);
+            default:
                 exit(EXIT_FAILURE);
         }
     }
@@ -37,7 +36,6 @@ int main(int argc, char *argv[]) {
         exit_code = 1;
         goto cleanup;
     }
-    fprintf(stderr, "RPC_FIND SUCCESSFUL\n");
 
     for (int i = 0; i < 2; i++) {
         /* Prepare request */
@@ -47,9 +45,7 @@ int main(int argc, char *argv[]) {
             .data1 = left_operand, .data2_len = 1, .data2 = &right_operand};
 
         /* Call and receive response */
-        fprintf(stderr, "Starting Function call of add2\n");
         rpc_data *response_data = rpc_call(state, handle_add2, &request_data);
-        fprintf(stderr, "Result of add2 returned: %d\n", response_data->data1);
 
         if (response_data == NULL) {
             fprintf(stderr, "Function call of add2 failed\n");
