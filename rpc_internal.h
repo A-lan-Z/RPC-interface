@@ -53,6 +53,12 @@ uint64_t ntohll(uint64_t value);
 /* Helper function to send message using designed protocol */
 int rpc_send_message(int sock, int operation, char *name, rpc_data *data);
 
+/* Helper function to receive message using designed protocol */
+int read_message(int client_sock, int *operation, size_t *name_len, size_t *data_len, char **function_name);
+
+/* Helper function to create client socket and connect with server */
+int create_and_connect_socket(rpc_client *cl);
+
 /* Helper function to find the requested function */
 function_reg *find_function(char *function_name, function_reg *function_list);
 

@@ -63,6 +63,46 @@ int rpc_send_message(int sock, int operation, char *name, rpc_data *data) {
     return 0;
 }
 
+/* Helper function to receive message using designed protocol */
+int read_message(int client_sock, int *operation, size_t *name_len, size_t *data_len, char **function_name) {
+    // Read header
+    uint32_t name_len_net, data_len_net;
+    read(client_sock, operation, sizeof(*operation));
+    read(client_sock, &name_len_net, sizeof(name_len_net));
+    read(client_sock, &data_len_net, sizeof(data_len_net));
+
+    // Convert lengths to host byte order
+    *name_len = ntohl(name_len_net);
+    *data_len = ntohl(data_len_net);
+
+    // Read function name
+    *function_name = malloc(*name_len + 1);
+    if (*function_name == NULL) {
+        perror("malloc");
+        return -1;
+    }
+    read(client_sock, *function_name, *name_len);
+    (*function_name)[*name_len] = '\0'; // null-terminate the string
+
+    return 0;
+}
+
+/* Helper function to create client socket and connect with server */
+int create_and_connect_socket(rpc_client *cl) {
+    int client_sock = socket(AF_INET6, SOCK_STREAM, 0);
+    if (client_sock < 0) {
+        perror("Socket creation failed");
+        return -1;
+    }
+
+    // Connect to the server
+    if (connect(client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
+        free(cl);
+        return -1;
+    }
+    return client_sock;
+}
+
 /* Helper function to find the requested function */
 function_reg *find_function(char *function_name, function_reg *function_list) {
     function_reg *current = function_list;
@@ -137,23 +177,11 @@ void *handle_connection(void *arg) {
 
     // Read the header: operation code, function name length, and data length from the client
     int operation;
-    uint32_t name_len_net, data_len_net;
-    read(client_sock, &operation, sizeof(operation));
-    read(client_sock, &name_len_net, sizeof(name_len_net));
-    read(client_sock, &data_len_net, sizeof(data_len_net));
-
-    // Convert lengths to host byte order
-    size_t name_len = ntohl(name_len_net);
-    size_t data_len = ntohl(data_len_net);
-
-    // Read the function name from the client
-    char *function_name = malloc(name_len + 1);
-    if (function_name == NULL) {
-        perror("malloc");
+    size_t name_len, data_len;
+    char *function_name;
+    if (read_message(client_sock, &operation, &name_len, &data_len, &function_name) < 0) {
         return NULL;
     }
-    read(client_sock, function_name, name_len);
-    function_name[name_len] = '\0'; // null-terminate the string
 
     // Read the rpc data from the client
     rpc_data *data = malloc(sizeof(rpc_data));

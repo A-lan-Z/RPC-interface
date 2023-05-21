@@ -43,15 +43,8 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
     }
 
     // Create a new socket
-    int client_sock = socket(AF_INET6, SOCK_STREAM, 0);
+    int client_sock = create_and_connect_socket(cl);
     if (client_sock < 0) {
-        perror("Socket creation failed");
-        return NULL;
-    }
-
-    // Connect to the server
-    if (connect(client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
-        free(cl);
         return NULL;
     }
 
@@ -61,28 +54,11 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 
     // Receive response
     int operation;
-    uint32_t name_len_net, data_len_net;
-    read(client_sock, &operation, sizeof(operation));
-    read(client_sock, &name_len_net, sizeof(name_len_net));
-    read(client_sock, &data_len_net, sizeof(data_len_net));
-
-    // Convert lengths to host byte order
-    size_t name_len = ntohl(name_len_net);
-    size_t data_len = ntohl(data_len_net);
-
-    // Check operation code for error
-    if (operation == RPC_ERROR) {
+    size_t name_len, data_len;
+    char *function_name;
+    if (read_message(client_sock, &operation, &name_len, &data_len, &function_name) < 0) {
         return NULL;
     }
-
-    // Read function name
-    char *function_name = malloc(name_len + 1);
-    if (function_name == NULL) {
-        perror("malloc");
-        return NULL;
-    }
-    read(client_sock, function_name, name_len);
-    function_name[name_len] = '\0'; // null-terminate the string
 
     // Create rpc_handle
     rpc_handle *handle = malloc(sizeof(rpc_handle));
@@ -128,15 +104,8 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     }
 
     // Create a new socket
-    int client_sock = socket(AF_INET6, SOCK_STREAM, 0);
+    int client_sock = create_and_connect_socket(cl);
     if (client_sock < 0) {
-        perror("Socket creation failed");
-        return NULL;
-    }
-
-    // Connect to the server
-    if (connect(client_sock, (struct sockaddr *)&cl->server_addr, sizeof(cl->server_addr)) < 0) {
-        free(cl);
         return NULL;
     }
 
@@ -145,17 +114,9 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     // Receive response
     int operation;
-    uint32_t name_len_net, data_len_net;
-    read(client_sock, &operation, sizeof(operation));
-    read(client_sock, &name_len_net, sizeof(name_len_net));
-    read(client_sock, &data_len_net, sizeof(data_len_net));
-
-    // Convert lengths to host byte order
-    size_t name_len = ntohl(name_len_net);
-    size_t data_len = ntohl(data_len_net);
-
-    // Check operation code for error
-    if (operation == RPC_ERROR) {
+    size_t name_len, data_len;
+    char *function_name;
+    if (read_message(client_sock, &operation, &name_len, &data_len, &function_name) < 0) {
         return NULL;
     }
 
@@ -166,11 +127,6 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         return NULL;
     }
     output_data->data2_len = data_len;
-
-    // Read function name
-    char *function_name = malloc(name_len + 1);
-    read(client_sock, function_name, name_len);
-    function_name[name_len] = '\0'; // null-terminate the string
 
     // Free the function_name as it's not used after this point
     free(function_name);
