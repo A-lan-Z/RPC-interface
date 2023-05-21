@@ -47,9 +47,9 @@ struct rpc_client {
 /* Helper function to send message using designed protocol */
 int rpc_send_message(int sock, int operation, char *name, rpc_data *data) {
     // Convert ints to network byte order
-    uint64_t name_len_net = htonl(strlen(name));
-    uint64_t data_len_net = data ? htonl(data->data2_len) : 0;
-    uint64_t data1_net = data ? htonl((uint32_t)data->data1) : 0;
+    uint32_t name_len_net = htonl(strlen(name));
+    uint32_t data_len_net = data ? htonl(data->data2_len) : 0;
+    uint32_t data1_net = data ? htonl((uint32_t)data->data1) : 0;
 
     // Send header
     write(sock, &operation, sizeof(operation));
@@ -141,7 +141,7 @@ void *handle_connection(void *arg) {
 
     // Read the header: operation code, function name length, and data length from the client
     int operation;
-    uint64_t name_len_net, data_len_net;
+    uint32_t name_len_net, data_len_net;
     read(client_sock, &operation, sizeof(operation));
     read(client_sock, &name_len_net, sizeof(name_len_net));
     read(client_sock, &data_len_net, sizeof(data_len_net));
@@ -166,7 +166,7 @@ void *handle_connection(void *arg) {
         free(function_name);
         return NULL;
     }
-    uint64_t data1_net;
+    uint32_t data1_net;
     data->data1 = 0;
     data->data2_len = data_len;
     data->data2 = malloc(data_len);
@@ -367,7 +367,7 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 
     // Receive response
     int operation;
-    uint64_t name_len_net, data_len_net;
+    uint32_t name_len_net, data_len_net;
     read(client_sock, &operation, sizeof(operation));
     read(client_sock, &name_len_net, sizeof(name_len_net));
     read(client_sock, &data_len_net, sizeof(data_len_net));
@@ -400,7 +400,7 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
     handle->function_name = function_name;
 
     // Read output data
-    uint64_t data1_net;
+    uint32_t data1_net;
     void *discard_buffer = malloc(data_len);
     read(client_sock, &data1_net, sizeof(data1_net));
     if (data_len > 0) {
@@ -447,7 +447,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     // Receive response
     int operation;
-    uint64_t name_len_net, data_len_net;
+    uint32_t name_len_net, data_len_net;
     read(client_sock, &operation, sizeof(operation));
     read(client_sock, &name_len_net, sizeof(name_len_net));
     read(client_sock, &data_len_net, sizeof(data_len_net));
@@ -475,7 +475,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     function_name[name_len] = '\0'; // null-terminate the string
 
     // Read output data
-    uint64_t data1_net;
+    uint32_t data1_net;
     read(client_sock, &data1_net, sizeof(data1_net));
     output_data->data1 = ntohl(data1_net);
     if (data_len > 0) {
