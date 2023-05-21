@@ -168,6 +168,9 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     read(client_sock, function_name, name_len);
     function_name[name_len] = '\0'; // null-terminate the string
 
+    // Free the function_name as it's not used after this point
+    free(function_name);
+
     // Read output data
     uint64_t data1_net;
     read(client_sock, &data1_net, sizeof(data1_net));
