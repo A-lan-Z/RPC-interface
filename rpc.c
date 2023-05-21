@@ -44,12 +44,44 @@ struct rpc_client {
 };
 
 
+uint64_t htonll(uint64_t value) {
+    // Check the endianness of the system
+    const int num = 1;
+    if(*(char *)&num == 1) {
+        // If the system is little endian
+        const uint32_t high_part = htonl((uint32_t)(value >> 32));
+        const uint32_t low_part = htonl((uint32_t)(value & 0xFFFFFFFFLL));
+
+        return (((uint64_t)low_part) << 32) | high_part;
+    } else {
+        // If the system is big endian
+        return value;
+    }
+}
+
+
+uint64_t ntohll(uint64_t value) {
+    // Check the endianness of the system
+    const int num = 1;
+    if(*(char *)&num == 1) {
+        // If the system is little endian
+        const uint32_t high_part = ntohl((uint32_t)(value >> 32));
+        const uint32_t low_part = ntohl((uint32_t)(value & 0xFFFFFFFFLL));
+
+        return (((uint64_t)low_part) << 32) | high_part;
+    } else {
+        // If the system is big endian
+        return value;
+    }
+}
+
+
 /* Helper function to send message using designed protocol */
 int rpc_send_message(int sock, int operation, char *name, rpc_data *data) {
     // Convert ints to network byte order
     uint32_t name_len_net = htonl(strlen(name));
     uint32_t data_len_net = data ? htonl(data->data2_len) : 0;
-    uint32_t data1_net = data ? htonl((uint32_t)data->data1) : 0;
+    uint64_t data1_net = data ? htonll((uint64_t)data->data1) : 0;
 
     // Send header
     write(sock, &operation, sizeof(operation));
@@ -166,7 +198,6 @@ void *handle_connection(void *arg) {
         free(function_name);
         return NULL;
     }
-    uint32_t data1_net;
     data->data1 = 0;
     data->data2_len = data_len;
     data->data2 = malloc(data_len);
@@ -176,8 +207,10 @@ void *handle_connection(void *arg) {
         free(data);
         return NULL;
     }
+
+    uint64_t data1_net;
     read(client_sock, &data1_net, sizeof(data1_net));
-    data->data1 = ntohl(data1_net);
+    data->data1 = ntohll(data1_net);
     read(client_sock, data->data2, data_len);
 
     // Handle the operation
@@ -475,9 +508,9 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     function_name[name_len] = '\0'; // null-terminate the string
 
     // Read output data
-    uint32_t data1_net;
+    uint64_t data1_net;
     read(client_sock, &data1_net, sizeof(data1_net));
-    output_data->data1 = ntohl(data1_net);
+    output_data->data1 = ntohll(data1_net);
     if (data_len > 0) {
         output_data->data2 = malloc(data_len);
         if (output_data->data2 == NULL) {
