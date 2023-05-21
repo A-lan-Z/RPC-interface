@@ -1,0 +1,70 @@
+Name: Yezihan Zhou
+Login ID: Yezihan_Z
+Student ID: 1272139
+
+1. Should the server accept calls from everyone, or just a subset of users?
+    * For this project: The server accepts calls from everyone as there is no restriction in the project description.
+    * In real-world: It would be better for the server to only accept calls from authenticated users to ensure security.
+
+2. Should authentication etc. be provided by the RPC framework, or by the functions that use the RPC framework?
+    * For this project: No authentication is required for this project.
+    * In real-world: Authentication should be provided by the RPC framework. This ensures consistent security across
+    all functions that uses the RPC framework.
+
+3. What transport layer protocol should be used? What are the trade-offs?
+    * For this project: TPC should be used as it is more reliable as it is connection-oriented and provides error
+    detection/correction. The trade-off is that it is slower than UDP.
+    * In real-world: TCP would be used for applications requiring high reliability, while UDP would be used for
+    applications requiring fast and connectionless communication.
+
+4. In which function(s) should the socket(s) be created?
+    * For this project: Server sockets should be created by 'rpc_init_server' function, as the server will have the
+    same socket throughout. Client sockets should be created in the 'rpc_find' and 'rpc_call' functions. This allows
+    a new socket to be created each time a request is made and closes the socket after the request is completed. The
+    server then creates a new thread for each socket connection, therefore enabling multi-threaded processing and
+    non-blocking performance.
+    * In real-world: The sockets would typically be created in the initialization functions of the server and client.
+
+5. Should rpc_client and rpc_server be allocated dynamically or statically? What are the implications
+for the client and server code?
+    * For this project and in real-world: Memory should be allocated dynamically to allow more scalability.
+
+6. What happens if one host uses big-endian byte order and the other uses little-endian? How does that relate
+to “network byte order”?
+    * For this project and in real-world: Two hosts will interpret the same bytes differently and lead to incorrect
+    interpretation. To avoid this, both hosts should agree on using the network byte order to send their data, and
+    convert the data back to the host's byte order.
+
+
+
+
+Protocol Design
+
+Message Format:
+    Header:
+        Type of operation: rpc_find, rpc_register, rpc_call
+        Length of function name
+        Length of the data block
+    Function name
+    The rpc_data:
+        data1
+        data2_len
+        data2
+
+Encoding and Decoding:
+    The integer data are converted to network byte order to ensure that the protocol can work on both big-endian and
+    little-endian systems.
+
+    A fixed sized field: uint32_t is used to encode the data2_len, the length of the entire data block and the length
+    of the function name. This is sufficient to handle the maximum data length of 100 000. Data with length over
+    100 000 will result in an "Overlength error".
+
+Error Handling:
+    If an error occurs, the server will send an error code in the operation field of the header and cause the requests
+    to return NULL. The client will check for this after each operation.
+
+Transport Layer Protocol:
+    This rpc system use TCP as the transport layer protocol, as it handles packet loss and duplication, as well as
+    segmenting IP packets that exceeds maximum allowed size.
+    The main disadvantage of TCP is that it has more overhead than UDP, but for this project, reliability is more
+    important than efficiency.
